@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 
 	"braip/internal/database"
 )
@@ -19,6 +20,8 @@ type ExternalProduct struct {
 	Category    string  `json:"category"`
 	Image       string  `json:"image"`
 }
+
+var dbMutex sync.Mutex // Mutex para sincronizar o acesso ao banco de dados
 
 func main() {
 	// Definir a flag --id para importar um produto por ID
@@ -69,18 +72,33 @@ func ImportProducts() error {
 	}
 	defer db.Close()
 
-	// Inserir cada produto no banco
+	var wg sync.WaitGroup
+
+	// Inserir cada produto no banco de dados em paralelo usando goroutines
 	for _, p := range products {
-		_, err = db.Exec(`
-			INSERT INTO products (id, name, price, description, category, image_url)
-			VALUES (?, ?, ?, ?, ?, ?)
-			ON CONFLICT(id) DO NOTHING;`, // Usa ON CONFLICT para evitar duplicação
-			p.ID, p.Title, p.Price, p.Description, p.Category, p.Image,
-		)
-		if err != nil {
-			log.Printf("Erro ao inserir produto %d: %v", p.ID, err)
-		}
+		wg.Add(1)
+		go func(product ExternalProduct) {
+			defer wg.Done()
+			// Usar o mutex para garantir que apenas uma goroutine acesse o banco de dados por vez
+			dbMutex.Lock()
+			defer dbMutex.Unlock()
+
+			_, err := db.Exec(`
+				INSERT INTO products (id, name, price, description, category, image_url)
+				VALUES (?, ?, ?, ?, ?, ?)
+				ON CONFLICT(id) DO NOTHING;`, // Usa ON CONFLICT para evitar duplicação
+				product.ID, product.Title, product.Price, product.Description, product.Category, product.Image,
+			)
+			if err != nil {
+				log.Printf("Erro ao inserir produto %d: %v", product.ID, err)
+			} else {
+				fmt.Printf("Produto %d importado com sucesso!\n", product.ID)
+			}
+		}(p)
 	}
+
+	// Aguardar até todas as goroutines terminarem
+	wg.Wait()
 
 	fmt.Println("Produtos importados com sucesso!")
 	return nil
@@ -114,6 +132,9 @@ func ImportProductByID(id int) error {
 	defer db.Close()
 
 	// Inserir o produto no banco
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
 	_, err = db.Exec(`
 		INSERT INTO products (id, name, price, description, category, image_url)
 		VALUES (?, ?, ?, ?, ?, ?)

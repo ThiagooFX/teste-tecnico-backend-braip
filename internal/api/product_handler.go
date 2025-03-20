@@ -38,17 +38,25 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validação dos dados
 	if product.Name == "" || product.Price <= 0 || product.Description == "" || product.Category == "" {
 		http.Error(w, "Campos obrigatórios não preenchidos corretamente", http.StatusBadRequest)
 		return
 	}
 
-	if err := services.CreateProduct(product); err != nil {
+	// Cria o produto e obtém o ID gerado
+	id, err := services.CreateProduct(product)
+	if err != nil {
 		http.Error(w, "Erro ao criar produto", http.StatusInternalServerError)
 		return
 	}
 
+	// Atualiza o ID do produto com o valor gerado
+	product.ID = int(id)
+
+	// Retorna o produto criado com o ID correto
 	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(product)
 }
 

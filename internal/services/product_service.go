@@ -11,8 +11,12 @@ func GetProducts() ([]models.Product, error) {
 }
 
 // CreateProduct cria um novo produto
-func CreateProduct(product models.Product) error {
-	return repository.CreateProduct(product)
+func CreateProduct(product models.Product) (int64, error) {
+	id, err := repository.CreateProduct(product)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 // GetProductByID retorna um produto pelo ID

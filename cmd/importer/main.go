@@ -15,7 +15,7 @@ import (
 type ExternalProduct struct {
 	ID          int     `json:"id"`
 	Title       string  `json:"title"`
-	Price       float64 `json:"price"`
+	Price       float64 `json:"price"` 		// Esse valor será convertido em centavos antes de ir para o database
 	Description string  `json:"description"`
 	Category    string  `json:"category"`
 	Image       string  `json:"image"`
@@ -59,8 +59,8 @@ func ImportProducts() error {
 		return fmt.Errorf("API retornou status %d", resp.StatusCode)
 	}
 
-	var products []ExternalProduct
-	err = json.NewDecoder(resp.Body).Decode(&products)
+	var apiProducts []ExternalProduct
+	err = json.NewDecoder(resp.Body).Decode(&apiProducts)
 	if err != nil {
 		return fmt.Errorf("erro ao decodificar resposta da API: %v", err)
 	}
@@ -75,26 +75,29 @@ func ImportProducts() error {
 	var wg sync.WaitGroup
 
 	// Inserir cada produto no banco de dados em paralelo usando goroutines
-	for _, p := range products {
+	for _, apiProduct := range apiProducts {
 		wg.Add(1)
-		go func(product ExternalProduct) {
+		go func(apiProduct ExternalProduct) {
 			defer wg.Done()
 			// Usar o mutex para garantir que apenas uma goroutine acesse o banco de dados por vez
 			dbMutex.Lock()
 			defer dbMutex.Unlock()
 
+			// Converter o preço de reais para centavos
+			priceInCents := int(apiProduct.Price * 100)
+
 			_, err := db.Exec(`
 				INSERT INTO products (id, name, price, description, category, image_url)
 				VALUES (?, ?, ?, ?, ?, ?)
 				ON CONFLICT(id) DO NOTHING;`, // Usa ON CONFLICT para evitar duplicação
-				product.ID, product.Title, product.Price, product.Description, product.Category, product.Image,
+				apiProduct.ID, apiProduct.Title, priceInCents, apiProduct.Description, apiProduct.Category, apiProduct.Image,
 			)
 			if err != nil {
-				log.Printf("Erro ao inserir produto %d: %v", product.ID, err)
+				log.Printf("Erro ao inserir produto %d: %v", apiProduct.ID, err)
 			} else {
-				fmt.Printf("Produto %d importado com sucesso!\n", product.ID)
+				fmt.Printf("Produto %d importado com sucesso!\n", apiProduct.ID)
 			}
-		}(p)
+		}(apiProduct)
 	}
 
 	// Aguardar até todas as goroutines terminarem
@@ -118,8 +121,8 @@ func ImportProductByID(id int) error {
 		return fmt.Errorf("API retornou status %d", resp.StatusCode)
 	}
 
-	var product ExternalProduct
-	err = json.NewDecoder(resp.Body).Decode(&product)
+	var apiProduct ExternalProduct
+	err = json.NewDecoder(resp.Body).Decode(&apiProduct)
 	if err != nil {
 		return fmt.Errorf("erro ao decodificar resposta da API: %v", err)
 	}
@@ -131,6 +134,9 @@ func ImportProductByID(id int) error {
 	}
 	defer db.Close()
 
+	// Converter o preço de reais para centavos
+	priceInCents := int(apiProduct.Price * 100)
+
 	// Inserir o produto no banco
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
@@ -139,12 +145,12 @@ func ImportProductByID(id int) error {
 		INSERT INTO products (id, name, price, description, category, image_url)
 		VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO NOTHING;`, // Usa ON CONFLICT para evitar duplicação
-		product.ID, product.Title, product.Price, product.Description, product.Category, product.Image,
+		apiProduct.ID, apiProduct.Title, priceInCents, apiProduct.Description, apiProduct.Category, apiProduct.Image,
 	)
 	if err != nil {
-		return fmt.Errorf("erro ao inserir produto %d no banco de dados: %v", product.ID, err)
+		return fmt.Errorf("erro ao inserir produto %d no banco de dados: %v", apiProduct.ID, err)
 	}
 
-	fmt.Printf("Produto %d importado com sucesso!\n", product.ID)
+	fmt.Printf("Produto %d importado com sucesso!\n", apiProduct.ID)
 	return nil
 }

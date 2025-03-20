@@ -37,22 +37,31 @@ func GetProducts() ([]models.Product, error) {
 }
 
 // CreateProduct insere um novo produto no banco de dados
-func CreateProduct(product models.Product) error {
+func CreateProduct(product models.Product) (int64, error) {
 	db, err := db.OpenDB()
 	if err != nil {
 		log.Printf("Erro ao conectar ao banco de dados: %v", err)
-		return err
+		return 0, err
 	}
 	defer db.Close()
 
-	_, err = db.Exec("INSERT INTO products (name, price, description, category, image_url) VALUES (?, ?, ?, ?, ?)",
-		product.Name, product.Price, product.Description, product.Category, product.ImageURL)
+	result, err := db.Exec(
+		"INSERT INTO products (name, price, description, category, image_url) VALUES (?, ?, ?, ?, ?)",
+		product.Name, product.Price, product.Description, product.Category, product.ImageURL,
+	)
 	if err != nil {
 		log.Printf("Erro ao salvar produto: %v", err)
-		return err
+		return 0, err
 	}
 
-	return nil
+	// Captura o ID gerado
+	id, err := result.LastInsertId()
+	if err != nil {
+		log.Printf("Erro ao obter ID do produto: %v", err)
+		return 0, err
+	}
+
+	return id, nil
 }
 
 // GetProductByID retorna um produto pelo ID

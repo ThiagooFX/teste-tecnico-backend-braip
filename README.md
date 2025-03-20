@@ -33,23 +33,23 @@ Desde já, agradeço a oportunidade de estar participando do processo👨‍💻
 
 ## Estrutura do projeto
 
-/braip
-├── /cmd
-│   └── /importer
-│       └── main.go                 # Script para importar dados externos
-├── /internal
-│   ├── /api
-│   │   └── product_handler.go      # Handlers da API
-│   ├── /database
-│   │   └── db.go                   # Configuração do banco de dados
-│   ├── /models
-│   │   └── products.go             # Definição dos modelos
-│   ├── /repository
-│   │   └── product_repository.go   # Acesso ao banco de dados
-│   └── /services
-│       └── product_service.go      # Lógica de negócio
-├── database.db
-├── go.mod
-├── go.sum
-├── main.go                         # Ponto de entrada da aplicação
-└── README.md                       # Documentação do projeto
+- /braip
+- ├── /cmd
+- │   └── /importer
+- │       └── main.go                 # Script para importar dados externos
+- ├── /internal
+- │   ├── /api
+- │   │   └── product_handler.go      # Handlers da API
+- │   ├── /database
+- │   │   └── db.go                   # Configuração do banco de dados
+- │   ├── /models
+- │   │   └── products.go             # Definição dos modelos
+- │   ├── /repository
+- │   │   └── product_repository.go   # Acesso ao banco de dados
+- │   └── /services
+- │       └── product_service.go      # Lógica de negócio
+- ├── database.db
+- ├── go.mod
+- ├── go.sum
+- ├── main.go                         # Ponto de entrada da aplicação
+- └── README.md                       # Documentação do projeto
